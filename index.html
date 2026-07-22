@@ -78,14 +78,14 @@
 
   .jump-today{display:block;margin:2px auto 14px;background:none;border:none;color:var(--brass);font-family:'IBM Plex Mono',monospace;font-size:11.5px;text-decoration:underline;cursor:pointer;text-align:center;}
 
-  .progress-row{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
-  .mini-stats{display:flex;gap:8px;margin-left:auto;flex-shrink:0;}
-  .mini-stat{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--paper-dim);display:flex;align-items:center;gap:4px;white-space:nowrap;background:var(--panel-raised);border:1px solid var(--line);border-radius:20px;padding:6px 11px;cursor:pointer;min-height:30px;}
+  .progress-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;}
+  .mini-stats{display:flex;gap:6px;margin-left:auto;flex-shrink:0;}
+  .mini-stat{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--paper-dim);display:flex;align-items:center;gap:3px;white-space:nowrap;background:var(--panel-raised);border:1px solid var(--line);border-radius:20px;padding:5px 8px;cursor:pointer;min-height:26px;}
   .mini-stat:hover{border-color:var(--brass-dim);}
   .mini-stat:active{transform:scale(0.97);}
   .mini-stat b{color:var(--brass);font-weight:600;}
-  .ring{width:44px;height:44px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--paper);}
-  .progress-text{font-size:13px;color:var(--paper-dim);}
+  .ring{width:40px;height:40px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--paper);}
+  .progress-text{font-size:12.5px;color:var(--paper-dim);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .progress-text b{color:var(--paper);font-weight:600;}
 
   .task-row{
@@ -221,8 +221,8 @@
     .day-nav .datebox .full{font-size:16px;}
     .cal-cell .frac{display:none;}
     .occ-badge{min-width:0;padding:2px 6px;}
-    .progress-row{flex-wrap:wrap;}
-    .mini-stats{margin-left:56px;}
+    .progress-text{font-size:11.5px;}
+    .mini-stat{font-size:10px;padding:4px 7px;}
   }
 </style>
 </head>
