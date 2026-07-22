@@ -79,6 +79,9 @@
   .jump-today{display:block;margin:2px auto 14px;background:none;border:none;color:var(--brass);font-family:'IBM Plex Mono',monospace;font-size:11.5px;text-decoration:underline;cursor:pointer;text-align:center;}
 
   .progress-row{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .mini-stats{display:flex;gap:10px;margin-left:auto;flex-shrink:0;}
+  .mini-stat{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--paper-dim);display:flex;align-items:center;gap:4px;white-space:nowrap;}
+  .mini-stat b{color:var(--brass);font-weight:600;}
   .ring{width:44px;height:44px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--paper);}
   .progress-text{font-size:13px;color:var(--paper-dim);}
   .progress-text b{color:var(--paper);font-weight:600;}
@@ -216,6 +219,8 @@
     .day-nav .datebox .full{font-size:16px;}
     .cal-cell .frac{display:none;}
     .occ-badge{min-width:0;padding:2px 6px;}
+    .progress-row{flex-wrap:wrap;}
+    .mini-stats{margin-left:56px;}
   }
 </style>
 </head>
@@ -284,13 +289,13 @@
       <div class="progress-row">
         <div class="ring" id="d-ring"></div>
         <div class="progress-text" id="d-progresstext"></div>
+        <div class="mini-stats">
+          <span class="mini-stat" title="Day streak">🔥 <b id="s-streak-mini">0</b></span>
+          <span class="mini-stat" title="Tasks tracked">✓ <b id="s-total-mini">0</b></span>
+        </div>
       </div>
 
       <div id="d-tasklist"></div>
-      <div class="streak-box">
-        <div class="s-item"><div class="s-num" id="s-streak">0</div><div class="s-label">day streak</div></div>
-        <div class="s-item"><div class="s-num" id="s-total">0</div><div class="s-label">tasks tracked</div></div>
-      </div>
     </div>
   </div>
 
@@ -302,7 +307,7 @@
         <h2 id="m-title"></h2>
         <button class="navbtn" onclick="shiftMonth(1)">›</button>
       </div>
-      <button class="jump-today" id="m-jumpcurrent" onclick="jumpToCurrentMonth()">Jump to this month</button>
+      <button class="jump-today" id="m-jumpcurrent" onclick="jumpToCurrentMonth()" style="display:none;">Jump to this month</button>
       <div class="legend">
         <span><i style="background:var(--green)"></i>All done</span>
         <span><i style="background:var(--blue)"></i>Over half</span>
@@ -310,6 +315,10 @@
       </div>
       <div class="cal-grid" id="m-dows"></div>
       <div class="cal-grid" id="m-grid" style="margin-top:5px;"></div>
+      <div class="streak-box">
+        <div class="s-item"><div class="s-num" id="s-streak">0</div><div class="s-label">day streak</div></div>
+        <div class="s-item"><div class="s-num" id="s-total">0</div><div class="s-label">tasks tracked</div></div>
+      </div>
     </div>
   </div>
 
@@ -642,8 +651,15 @@ function renderDay(){
   });
 
   computeStreak();
-  document.getElementById('s-total').textContent = tasks.length;
+  updateTasksTrackedDisplay();
   renderManage();
+}
+
+function updateTasksTrackedDisplay(){
+  const el1 = document.getElementById('s-total');
+  const el2 = document.getElementById('s-total-mini');
+  if(el1) el1.textContent = tasks.length;
+  if(el2) el2.textContent = tasks.length;
 }
 
 function onStampClick(ds, taskId){
@@ -712,7 +728,10 @@ function computeStreak(){
     const allDone = active.every(t=>dayComp[t.id]);
     if(allDone){ streak++; d.setDate(d.getDate()-1); } else break;
   }
-  document.getElementById('s-streak').textContent = streak;
+  const el1 = document.getElementById('s-streak');
+  const el2 = document.getElementById('s-streak-mini');
+  if(el1) el1.textContent = streak;
+  if(el2) el2.textContent = streak;
 }
 
 async function shiftMonth(n){
@@ -729,7 +748,12 @@ async function jumpToCurrentMonth(){
 function renderMonth(){
   updateAddButtonState();
   const y = currentMonth.getFullYear(), m = currentMonth.getMonth();
+  const now = new Date();
+  const isCurrentMonth = (y === now.getFullYear() && m === now.getMonth());
+  document.getElementById('m-jumpcurrent').style.display = isCurrentMonth ? 'none' : 'block';
   document.getElementById('m-title').textContent = currentMonth.toLocaleDateString(undefined,{month:'long', year:'numeric'});
+  computeStreak();
+  updateTasksTrackedDisplay();
 
   const dowRow = document.getElementById('m-dows');
   dowRow.innerHTML = ['S','M','T','W','T','F','S'].map(d=>`<div class="cal-dow">${d}</div>`).join('');
