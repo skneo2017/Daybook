@@ -109,8 +109,14 @@
   .section-title{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--paper-dim);margin:0 0 14px;display:flex;align-items:center;justify-content:space-between;}
   .manage-row{display:flex;align-items:center;gap:10px;padding:12px 4px;border-bottom:1px solid var(--line);}
   .manage-row:last-child{border-bottom:none;}
-  .manage-row .mname{flex:1;font-size:14.5px;}
-  .manage-row .mtime{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--sage);}
+  .manage-row .mname{flex:1;min-width:0;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .manage-row .meta-group{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  .manage-row .mtime{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--sage);white-space:nowrap;}
+  #manage-list{max-height:312px;overflow-y:auto;padding-right:4px;}
+  #manage-list::-webkit-scrollbar{width:6px;}
+  #manage-list::-webkit-scrollbar-track{background:transparent;}
+  #manage-list::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px;}
+  #manage-list::-webkit-scrollbar-thumb:hover{background:var(--brass-dim);}
   .icon-btn{background:var(--panel-raised);border:1px solid var(--line);color:var(--paper-dim);width:34px;height:34px;border-radius:7px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
   .icon-btn:hover{color:var(--paper);border-color:var(--brass-dim);}
   .icon-btn.del:hover{color:var(--rust);border-color:var(--rust);}
@@ -205,6 +211,9 @@
     .brand h1{font-size:21px;}
     .day-nav .datebox .full{font-size:16px;}
     .cal-cell .frac{display:none;}
+    .manage-row{flex-wrap:wrap;}
+    .manage-row .mname{flex-basis:100%;}
+    .manage-row .meta-group{margin-left:auto;}
   }
 </style>
 </head>
@@ -420,12 +429,13 @@ function fmtDate(d){
 }
 
 function defaultSeedTasks(){
+  const base = Date.now();
   return [
-    {id:'t1', name:'Read', minutes:10, createdAt: todayStr(), recurring:true},
-    {id:'t2', name:'Sleep', minutes:420, createdAt: todayStr(), recurring:true},
-    {id:'t3', name:'Wake up by 8 AM', minutes:null, createdAt: todayStr(), recurring:true},
-    {id:'t4', name:'Gym', minutes:60, createdAt: todayStr(), recurring:true},
-    {id:'t5', name:'Cardio / 10k steps', minutes:null, createdAt: todayStr(), recurring:true},
+    {id:'t1', name:'Read', minutes:10, createdAt: todayStr(), recurring:true, createdTs: base+1},
+    {id:'t2', name:'Sleep', minutes:420, createdAt: todayStr(), recurring:true, createdTs: base+2},
+    {id:'t3', name:'Wake up by 8 AM', minutes:null, createdAt: todayStr(), recurring:true, createdTs: base+3},
+    {id:'t4', name:'Gym', minutes:60, createdAt: todayStr(), recurring:true, createdTs: base+4},
+    {id:'t5', name:'Cardio / 10k steps', minutes:null, createdAt: todayStr(), recurring:true, createdTs: base+5},
   ];
 }
 
@@ -500,14 +510,19 @@ function signIn(){
       signInWithRedirect(auth, provider);
     } else {
       console.error(err);
-      document.getElementById('auth-status').textContent = 'Sign-in failed — please try again.';
+      document.getElementById('auth-status').textContent = `Sign-in failed: ${err.code || err.message}`;
     }
   });
 }
+getRedirectResult(auth).catch(err=>{
+  console.error(err);
+  if(err && err.code){
+    document.getElementById('auth-status').textContent = `Sign-in failed: ${err.code}`;
+  }
+});
 function signOutUser(){
   signOut(auth);
 }
-getRedirectResult(auth).catch(err=>console.error(err));
 onAuthStateChanged(auth, async (user)=>{
   currentUser = user;
   if(user){
@@ -524,7 +539,10 @@ onAuthStateChanged(auth, async (user)=>{
 });
 
 function tasksActiveOn(dateStr){
-  return tasks.filter(t => t.recurring===false ? t.createdAt===dateStr : t.createdAt <= dateStr);
+  return tasks.filter(t => {
+    if(t.deletedAt && dateStr >= t.deletedAt) return false;
+    return t.recurring===false ? t.createdAt===dateStr : t.createdAt <= dateStr;
+  });
 }
 function fmtTime(mins){
   if(mins===null || mins===undefined) return '';
@@ -726,21 +744,25 @@ function renderMonth(){
 
 function renderManage(){
   const list = document.getElementById('manage-list');
-  document.getElementById('mg-count').textContent = ` · ${tasks.length}`;
+  const ds = fmtDate(currentDay);
+  const active = [...tasksActiveOn(ds)].sort((a,b)=>(b.createdTs||0)-(a.createdTs||0));
+  document.getElementById('mg-count').textContent = ` · ${active.length}`;
   list.innerHTML = '';
-  if(!tasks.length){
-    list.innerHTML = `<div class="empty">No recurring tasks yet.</div>`;
+  if(!active.length){
+    list.innerHTML = `<div class="empty">No tasks for this day yet.</div>`;
     return;
   }
-  tasks.forEach(t=>{
+  active.forEach(t=>{
     const row = document.createElement('div');
     row.className = 'manage-row';
     const onceLabel = t.recurring===false ? new Date(t.createdAt+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}) : '';
     row.innerHTML = `
       <div class="mname">${escapeHtml(t.name)}</div>
-      ${t.recurring===false ? `<span class="badge">once · ${onceLabel}</span>` : `<span class="badge">daily</span>`}
-      ${t.photoEnabled ? `<span class="badge">📷 photo</span>` : ''}
-      ${t.minutes ? `<div class="mtime">${fmtTime(t.minutes)}</div>` : ''}
+      <div class="meta-group">
+        ${t.recurring===false ? `<span class="badge">once · ${onceLabel}</span>` : `<span class="badge">daily</span>`}
+        ${t.photoEnabled ? `<span class="badge">📷 photo</span>` : ''}
+        ${t.minutes ? `<span class="mtime">${fmtTime(t.minutes)}</span>` : ''}
+      </div>
       <button class="icon-btn" title="Edit" onclick="editTask('${t.id}')">✎</button>
       <button class="icon-btn del" title="Delete" onclick="deleteTask('${t.id}')">✕</button>
     `;
@@ -793,8 +815,9 @@ function editTask(id){
 function deleteTask(id){
   const t = tasks.find(x=>x.id===id);
   if(!t) return;
-  if(!confirm(`Delete "${t.name}"? This removes it from every future day.`)) return;
-  tasks = tasks.filter(x=>x.id!==id);
+  const dayLabel = currentDay.toLocaleDateString(undefined,{month:'short', day:'numeric'});
+  if(!confirm(`Remove "${t.name}" from ${dayLabel} onward? Its past history is kept.`)) return;
+  t.deletedAt = fmtDate(currentDay);
   persistTasks();
   renderDay();
 }
@@ -820,6 +843,7 @@ function saveTask(){
     tasks.push({
       id:'t'+Date.now(), name, minutes,
       createdAt: fmtDate(currentDay),
+      createdTs: Date.now(),
       recurring: currentRecurring,
       photoEnabled: photoEnabled
     });
