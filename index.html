@@ -107,11 +107,10 @@
   .empty{text-align:center;color:var(--paper-dim);font-size:14px;padding:30px 10px;}
 
   .section-title{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--paper-dim);margin:0 0 14px;display:flex;align-items:center;justify-content:space-between;}
-  .manage-row{display:flex;align-items:center;gap:10px;padding:12px 4px;border-bottom:1px solid var(--line);}
+  .manage-row{display:flex;align-items:center;gap:8px;padding:12px 4px;border-bottom:1px solid var(--line);}
   .manage-row:last-child{border-bottom:none;}
   .manage-row .mname{flex:1;min-width:0;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .manage-row .meta-group{display:flex;align-items:center;gap:8px;flex-shrink:0;}
-  .manage-row .mtime{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--sage);white-space:nowrap;}
+  .occ-badge{flex-shrink:0;min-width:52px;text-align:center;}
   #manage-list{max-height:312px;overflow-y:auto;padding-right:4px;}
   #manage-list::-webkit-scrollbar{width:6px;}
   #manage-list::-webkit-scrollbar-track{background:transparent;}
@@ -152,6 +151,10 @@
   .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;width:100%;max-width:420px;box-shadow:var(--shadow);max-height:90vh;overflow-y:auto;}
   .modal h3{font-family:'Fraunces',serif;margin:0 0 18px;font-size:19px;font-weight:600;}
   .modal p.note{font-size:12.5px;color:var(--paper-dim);line-height:1.5;margin-top:-8px;margin-bottom:16px;}
+  .detail-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+  .detail-row:last-child{border-bottom:none;}
+  .detail-row span{color:var(--paper-dim);}
+  .detail-row b{color:var(--paper);font-weight:600;}
   .field{margin-bottom:16px;}
   .field label{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--paper-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;}
   .field input[type=text]{
@@ -211,9 +214,7 @@
     .brand h1{font-size:21px;}
     .day-nav .datebox .full{font-size:16px;}
     .cal-cell .frac{display:none;}
-    .manage-row{flex-wrap:wrap;}
-    .manage-row .mname{flex-basis:100%;}
-    .manage-row .meta-group{margin-left:auto;}
+    .occ-badge{min-width:0;padding:2px 6px;}
   }
 </style>
 </head>
@@ -395,6 +396,17 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- Task details modal (triggered by the ⋯ button) -->
+<div class="overlay" id="overlay-details">
+  <div class="modal">
+    <h3 id="details-title">Task</h3>
+    <div id="details-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('overlay-details')">Close</button>
+    </div>
+  </div>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -755,19 +767,27 @@ function renderManage(){
   active.forEach(t=>{
     const row = document.createElement('div');
     row.className = 'manage-row';
-    const onceLabel = t.recurring===false ? new Date(t.createdAt+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}) : '';
     row.innerHTML = `
       <div class="mname">${escapeHtml(t.name)}</div>
-      <div class="meta-group">
-        ${t.recurring===false ? `<span class="badge">once · ${onceLabel}</span>` : `<span class="badge">daily</span>`}
-        ${t.photoEnabled ? `<span class="badge">📷 photo</span>` : ''}
-        ${t.minutes ? `<span class="mtime">${fmtTime(t.minutes)}</span>` : ''}
-      </div>
+      <span class="badge occ-badge">${t.recurring===false ? 'once' : 'daily'}</span>
+      <button class="icon-btn" title="More details" onclick="openTaskDetails('${t.id}')">⋯</button>
       <button class="icon-btn" title="Edit" onclick="editTask('${t.id}')">✎</button>
       <button class="icon-btn del" title="Delete" onclick="deleteTask('${t.id}')">✕</button>
     `;
     list.appendChild(row);
   });
+}
+function openTaskDetails(id){
+  const t = tasks.find(x=>x.id===id);
+  if(!t) return;
+  const onceLabel = t.recurring===false ? new Date(t.createdAt+'T00:00:00').toLocaleDateString(undefined,{month:'long', day:'numeric', year:'numeric'}) : '';
+  document.getElementById('details-title').textContent = t.name;
+  document.getElementById('details-body').innerHTML = `
+    <div class="detail-row"><span>Repeats</span><b>${t.recurring===false ? `One-time · ${onceLabel}` : 'Every day'}</b></div>
+    <div class="detail-row"><span>Time allocation</span><b>${t.minutes ? fmtTime(t.minutes) : 'Not set'}</b></div>
+    <div class="detail-row"><span>Photo each time</span><b>${t.photoEnabled ? 'Yes' : 'No'}</b></div>
+  `;
+  document.getElementById('overlay-details').classList.add('show');
 }
 
 function escapeHtml(s){
@@ -1019,7 +1039,8 @@ Object.assign(window, {
   openTaskModal, editTask, deleteTask, closeModal, toggleTimeFields, setRecurring, saveTask,
   onStampClick, handleCaptureChange, openDayLightbox, closeLightbox,
   openBackupModal, exportData, importData,
-  openReminderModal, enableNotifications, downloadIcs
+  openReminderModal, enableNotifications, downloadIcs,
+  openTaskDetails
 });
 
 </script>
